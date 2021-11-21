@@ -118,10 +118,10 @@ class TripFinder:
         return flights
 
     def _find_available_trips(
-        self, trip_origin: str, trip_destination: str, trip: list = []
+        self, trip_from: str, trip_to: str, trip: list = []
     ) -> None:
         """
-        Find all available trips from `trip_origin` to `trip_destination`.
+        Find all available trips from `trip_from` to `trip_to`.
         """
 
         LAYOVER_LIMIT_SECONDS_MIN = 60 * 60
@@ -131,14 +131,12 @@ class TripFinder:
             # Trip itinerary is empty
             if trip == []:
                 # Flight origin equals trip origin
-                if flight['origin'] == trip_origin:
+                if flight['origin'] == trip_from:
                     # Save the flight and continue searching
-                    self._find_available_trips(
-                        trip_origin, trip_destination, [flight]
-                    )
+                    self._find_available_trips(trip_from, trip_to, [flight])
 
             # Previous flight destination equals trip destination
-            elif trip[-1]['destination'] == trip_destination:
+            elif trip[-1]['destination'] == trip_to:
                 # Save the trip and stop searching
                 self.trips.append(deepcopy(trip))
                 break
@@ -150,11 +148,10 @@ class TripFinder:
                 and LAYOVER_LIMIT_SECONDS_MIN
                 <= (flight['departure'] - trip[-1]['arrival']).total_seconds()
                 <= LAYOVER_LIMIT_SECONDS_MAX
+                and flight['destination'] != trip_from
             ):
                 # Save the flight and continue searching
-                self._find_available_trips(
-                    trip_origin, trip_destination, trip + [flight]
-                )
+                self._find_available_trips(trip_from, trip_to, trip + [flight])
 
     def _format_results(self) -> None:
         """
