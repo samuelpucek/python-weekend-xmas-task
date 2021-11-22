@@ -1,13 +1,13 @@
 import csv
-import datetime as dt
 import json
+import datetime as dt
 
 from argparse import ArgumentParser
-from copy import deepcopy
 
 
 class TripFinder:
     def __init__(self) -> None:
+
         # Datetime format
         self._datetime_format = '%Y-%m-%dT%H:%M:%S'
 
@@ -29,17 +29,42 @@ class TripFinder:
 
     def __call__(self) -> list:
 
-        # One-way trip
-        if not self.return_trip:
-            pass
-        # Return trip
-        else:
-            pass
-
+        # Find trips "to" destination
         self._find_available_trips(self.trip_origin, self.trip_destination)
-        self._format_results()
 
-        return self.results
+        # Return trip
+        if self.return_trip:
+            # Save trips "to" destination
+            trips_to = self.trips.copy()
+            self.trips.clear()
+
+            # Find trips "from" destination
+            self._find_available_trips(self.trip_destination, self.trip_origin)
+
+            # Save trips "from" destination
+            trips_back = self.trips.copy()
+            self.trips.clear()
+
+            # Find valid return trips
+            self.trips = self._match_return_trips(trips_to, trips_back)
+
+        # Return formated results
+        return self._format_results()
+
+    def _match_return_trips(self, trips_to: list, trips_back: list) -> list:
+        """
+        Match `trips_to` and `trips_back` to create valid return trips.
+        """
+
+        valid_return_trips = []
+
+        for trip_to in trips_to:
+            for trip_back in trips_back:
+                # Trip back must be after trip to
+                if trip_to[-1]['arrival'] <= trip_back[0]['departure']:
+                    valid_return_trips.append(trip_to + trip_back)
+
+        return valid_return_trips
 
     def _command_line_argumnet_parser(self) -> dict:
         """
@@ -138,7 +163,7 @@ class TripFinder:
             # Previous flight destination equals trip destination
             elif trip[-1]['destination'] == trip_to:
                 # Save the trip and stop searching
-                self.trips.append(deepcopy(trip))
+                self.trips.append(trip.copy())
                 break
 
             # Connecting flight after valid layover (stop)
@@ -153,9 +178,10 @@ class TripFinder:
                 # Save the flight and continue searching
                 self._find_available_trips(trip_from, trip_to, trip + [flight])
 
-    def _format_results(self) -> None:
+    def _format_results(self) -> json:
         """
-        Compute summary statistics, format result in predefined form and sort results on `total_price`.
+        Compute summary statistics, format result in predefined form
+        and sort results on `total_price`.
         """
 
         for trip in self.trips:
@@ -173,12 +199,6 @@ class TripFinder:
                     flight['bags_allowed']
                     if flight['bags_allowed'] < max_bags_allowed
                     else max_bags_allowed
-                )
-                flight['departure'] = flight['departure'].strftime(
-                    self._datetime_format
-                )
-                flight['arrival'] = flight['arrival'].strftime(
-                    self._datetime_format
                 )
 
             total_price = total_base_price + self.bags * total_bag_price
@@ -203,10 +223,20 @@ class TripFinder:
             self.results, key=lambda result: result['total_price']
         )
 
+        def _my_datetime_converter(datetime_object: dt.datetime) -> str:
+            """
+            Format datetime object into string '%Y-%m-%dT%H:%M:%S'.
+            """
+
+            if isinstance(datetime_object, dt.datetime):
+                return datetime_object.strftime(self._datetime_format)
+
+        return json.dumps(
+            self.results, indent=4, default=_my_datetime_converter
+        )
+
 
 if __name__ == '__main__':
     tf = TripFinder()
     trips = tf()
-
-    # Print results
-    print(json.dumps(trips, indent=4))
+    print(trips)
