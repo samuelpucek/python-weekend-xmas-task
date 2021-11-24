@@ -38,7 +38,7 @@ Mind there is no validation for input. It expacts correct data types of both req
 Run following example from command line
 
 ```bash
-python -m trip_finder example/example2.csv RFZ WIW --bags=1 --stops=1 --return
+python -m trip_finder example/example0.csv RFZ WIW --bags=1 --stops=1 --return
 ```
 
 This will load available flights from the file `example/example2.csv`, seach for all valid return trips between aiports `RFZ` and `WIW` with maximum one stopover, and with one required bag.
